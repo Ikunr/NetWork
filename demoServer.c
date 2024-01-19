@@ -97,15 +97,12 @@ int main()
     while (1)
     {
         readBytes = read(acceptfd, buffer, sizeof(buffer));
-        if (readBytes < 0)
+        if (readBytes <= 0)
         {
-            perror("read eror");
-            exit(-1);
-        } 
-        else if (readBytes == 0)
-        {
-            /* todo... 资源问题 */
             printf("111\n");
+            perror("read eror");
+            close(acceptfd);
+            break;
         }
         else
         {
@@ -116,11 +113,13 @@ int main()
 
             strncpy(replyBuffer, "一起加油", sizeof(replyBuffer) - 1);
             write(acceptfd, replyBuffer, sizeof(replyBuffer));
-        }
+        }    
     }
-
-    close(acceptfd);
+    
+    /* 关闭文件描述符 */
     close(sockfd);
+
+    
 
     return 0;
 }
