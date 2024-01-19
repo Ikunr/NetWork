@@ -9,21 +9,17 @@
 #include <signal.h>
 #include <error.h>
 #include <pthread.h>
-
+#include "threadPool.h"
 
 #define SERVER_PORT 8080
 #define MAX_LISTEN  128
 #define LOCAL_IPADDRESS "127.0.0.1"
 #define BUFFER_SIZE 128
 
-// void sigHander(int sigNum)
-// {
-//     int ret = 0;
 
-//     /* 资源回收 */
-//     /* todo... */
-
-// }
+#define MINTHREADS      5
+#define MAXTHREADS      10
+#define MAXQUEUESIZE    50
 
 
 /* 线程处理函数 */
@@ -50,9 +46,16 @@ void * threadHandle(void *arg)
     while (1)
     {
         readBytes = read(acceptfd, (void *)&recvbuffer, sizeof(recvbuffer));
-        if (readBytes <= 0)
+        if (readBytes < 0)
         {
-            perror("read eror");
+            // perror("read eror");
+            printf("read error\n");
+            close(acceptfd);
+            break;
+        }
+        else if (readBytes == 0)
+        {
+            printf("read readBytes == 0\n");
             close(acceptfd);
             break;
         }
@@ -79,12 +82,31 @@ void * threadHandle(void *arg)
     pthread_exit(NULL);
 }
 
+
+void sigHander(int sigNum)
+{
+    printf("ignore...\n");
+
+    return;
+}
+
+
 int main()
 {
+    /* 初始化线程池 */
+    threadpool_t pool;
+    threadPoolInit(&pool, MINTHREADS, MAXTHREADS, MAXQUEUESIZE);
+
+
     /* 信号注册 */
     // signal(SIGINT, sigHander);
     // signal(SIGQUIT, sigHander);
     // signal(SIGTSTP, sigHander);
+
+    /* 信号注册 */
+    signal(SIGPIPE, sigHander);
+
+
 
     /* 创建socket套接字 */
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -149,14 +171,15 @@ int main()
     while (1)
     {
         socklen_t clientAddressLen = 0;
+        /* 局部变量到下一次循环地方就会被释放. */
         int acceptfd = accept(sockfd, (struct sockaddr *)&clientAddress, &clientAddressLen);
         if (acceptfd == -1)
         {
             perror("accpet error");
             exit(-1);
         }
-
 #if 1
+        /* 这种情况每来一个客户端就开辟线程资源, 这种情况非常消耗资源 */
         pthread_t tid;
         /* 开一个线程去服务acceptfd */
         ret = pthread_create(&tid, NULL, threadHandle, (void *)&acceptfd);
@@ -165,10 +188,17 @@ int main()
             perror("thread create error");
             exit(-1);
         }
-
-        
+#else
+        /* 将任务添加任务队列 */
+        threadPoolAddTask(&pool, threadHandle, (void *)&acceptfd);
 #endif
-    }
+    } 
+
+#if 0
+    /* 释放线程池 */
+    threadPoolDestroy(&pool);
+#endif
+
 
     /* 关闭文件描述符 */
     close(sockfd);
