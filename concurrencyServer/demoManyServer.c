@@ -9,7 +9,9 @@
 #include <signal.h>
 #include <error.h>
 #include <pthread.h>
+#if 1
 #include "threadPool.h"
+#endif
 
 #define SERVER_PORT 8080
 #define MAX_LISTEN  128
@@ -20,7 +22,6 @@
 #define MINTHREADS      5
 #define MAXTHREADS      10
 #define MAXQUEUESIZE    50
-
 
 /* 线程处理函数 */
 void * threadHandle(void *arg)
@@ -93,10 +94,11 @@ void sigHander(int sigNum)
 
 int main()
 {
+#if 1
     /* 初始化线程池 */
     threadpool_t pool;
     threadPoolInit(&pool, MINTHREADS, MAXTHREADS, MAXQUEUESIZE);
-
+#endif
 
     /* 信号注册 */
     // signal(SIGINT, sigHander);
@@ -178,7 +180,7 @@ int main()
             perror("accpet error");
             exit(-1);
         }
-#if 1
+#if 0
         /* 这种情况每来一个客户端就开辟线程资源, 这种情况非常消耗资源 */
         pthread_t tid;
         /* 开一个线程去服务acceptfd */
@@ -194,7 +196,7 @@ int main()
 #endif
     } 
 
-#if 0
+#if 1
     /* 释放线程池 */
     threadPoolDestroy(&pool);
 #endif

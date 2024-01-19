@@ -14,10 +14,26 @@
 #define SERVER_IP   "172.25.23.103"
 #define BUFFER_SIZE 128
 
+/* 将客户端的通信句柄放到全局变量, 客户端本身不会有资源竞争 */
+int g_sockfd = 0;
+
+
+// void sigHandle(int sigNum)
+// {
+//     /* 关闭通信句柄 */
+//     close(g_sockfd);
+
+//     return;
+// }   
+
 int main()
 {
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1)
+    /* 注册一个Ctrl + C信号 */
+    // signal(SIGINT, sigHandle);
+
+
+    g_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (g_sockfd == -1)
     {
         perror("socket error");
         exit(-1);
@@ -38,7 +54,7 @@ int main()
     }
 
     /* ip地址 */
-    ret = connect(sockfd, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+    ret = connect(g_sockfd, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
     if (ret == -1)
     {
         perror("connect error");
@@ -55,14 +71,14 @@ int main()
     {
 #if 1
         strncpy(buffer, "123456", sizeof(buffer) - 1);
-        write(sockfd, buffer, sizeof(buffer));
+        write(g_sockfd, buffer, sizeof(buffer));
 
-        read(sockfd, recvBuffer, sizeof(recvBuffer) - 1);
+        read(g_sockfd, recvBuffer, sizeof(recvBuffer));
         printf("recv:%s\n", recvBuffer);
 #else
 
         int num = 0X12345678;
-        write(sockfd, (void *)&num, sizeof(num));
+        write(g_sockfd, (void *)&num, sizeof(num));
 
         sleep(5);
 #endif
@@ -72,8 +88,8 @@ int main()
     /* 休息5S */
     sleep(5);
 
-    
-    close(sockfd);
+    /* 关闭文件描述符 */
+    close(g_sockfd);
 
     return 0;
 }
