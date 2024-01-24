@@ -2,6 +2,7 @@
 #include <json-c/json.h>
 #include <json-c/json_object.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main()
 {
@@ -9,6 +10,7 @@ int main()
     {"way" : 1, "name" : "zhangsan", "passwd" : "abc123"}
     #endif
 
+#if 1
     /* 新建json对象 */
     struct json_object * jsonObj = json_object_new_object();
     if (jsonObj == NULL)
@@ -78,5 +80,16 @@ int main()
 
     /* 释放json对象 */
     json_object_put(jsonObj);
+#endif
+
+    /* md5sum 是MD5算法. */
+    char * ptr = "922ed7a250617a55f03c9ed099faa955";
+    printf("len:%ld\n", strlen(ptr)); 
+
+    /* commitId 是sha1算法. */
+    char * str = "cf5a833d4bbcf8fb28ebd9b610632273d66a8607";
+    printf("len:%ld\n", strlen(str)); 
+
+    
     return 0;
 }
