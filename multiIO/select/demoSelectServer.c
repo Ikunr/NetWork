@@ -70,9 +70,14 @@ int main()
     timeValue.tv_usec = 0;
     #endif
 
+    fd_set tmpReadSet;
+    /* 清除脏数据 */
+    bzero(&tmpReadSet, sizeof(tmpReadSet));
     while (1)
     {
-        ret = select(maxfd + 1, &readSet, NULL, NULL, NULL);
+        /* 备份读集合 */
+        tmpReadSet = readSet;
+        ret = select(maxfd + 1, &tmpReadSet, NULL, NULL, NULL);
         if (ret == -1)
         {
             perror("select error");
@@ -80,7 +85,7 @@ int main()
         }
 
         /* 如果sockfd在readSet集合里面 */
-        if (FD_ISSET(sockfd, &readSet))
+        if (FD_ISSET(sockfd, &tmpReadSet))
         {
             int acceptfd = accept(sockfd, NULL, NULL);
             if (acceptfd == -1)
@@ -98,7 +103,7 @@ int main()
         /* 程序到这个地方: 说明可能有通信 */
         for (int idx = 0; idx <= maxfd; idx++)
         {
-            if (idx != sockfd && FD_ISSET(idx, &readSet))
+            if (idx != sockfd && FD_ISSET(idx, &tmpReadSet))
             {
                 char buffer[BUFFER_SIZE];
                 /* 清除脏数据 */
