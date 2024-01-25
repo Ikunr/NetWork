@@ -101,7 +101,8 @@ int main()
         }
         
         /* 程序到这个地方: 说明可能有通信 */
-        for (int idx = 0; idx <= maxfd; idx++)
+        /* 这边的文件描述符索引从3开始, 忽略掉0,1,2: (标准输入)(标准输出)(标准出错) */
+        for (int idx = 3; idx <= maxfd; idx++)
         {
             if (idx != sockfd && FD_ISSET(idx, &tmpReadSet))
             {
