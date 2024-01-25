@@ -12,6 +12,8 @@
 #include <ctype.h>
 #include <pthread.h>
 
+/* 互斥锁 */
+pthread_mutex_t mutex;
 
 #define SERVER_PORT 8080
 #define MAX_LISTEN  128
@@ -42,12 +44,16 @@ void *accept_func(void *arg)
         perror("accpet error");
         pthread_exit(-1);
     }
+
+    pthread_mutex_lock(&mutex);
     /* 将通信的句柄 放到读集合 */
     FD_SET(acceptfd, info->readSet);
 
     /* 更新maxfd的值 */
     /* 解引用 */
     *(info->maxfd) = *(info->maxfd) < acceptfd ? acceptfd : *(info->maxfd);
+    /* 解锁 */
+    pthread_mutex_unlock(&mutex);
 
     /* 释放堆空间, 避免内存泄露 */
     if (info)
@@ -67,7 +73,6 @@ void * comm_func(void * arg)
     pthread_detach(pthread_self());
 
     int connfd = info->fd;
-    info->readSet;
 
     char buffer[BUFFER_SIZE];
     /* 清除脏数据 */
@@ -77,16 +82,24 @@ void * comm_func(void * arg)
     if (readBytes < 0)
     {
         perror("read error");
+        /* 加锁 */
+        pthread_mutex_lock(&mutex);
         /* 将该通信句柄从监听的读集合中删掉 */
         FD_CLR(connfd, (info->readSet));
+        /* 解锁 */
+        pthread_mutex_unlock(&mutex);
         /* 关闭文件句柄 */
         close(connfd);
     }
     else if (readBytes == 0)
     {
         printf("客户端断开连接...\n");
+        /* 加锁 */
+        pthread_mutex_lock(&mutex);
         /* 将该通信句柄从监听的读集合中删掉 */
         FD_CLR(connfd, info->readSet);
+        /* 解锁 */
+        pthread_mutex_unlock(&mutex);
         /* 关闭通信句柄 */
         close(connfd);
     }
@@ -110,13 +123,16 @@ void * comm_func(void * arg)
         free(info);
         info = NULL;
     }
-    
+
     /* 线程退出 */
     pthread_exit(NULL);
 }
 
 int main()
 {   
+    /* 初始化互斥锁 */
+    pthread_mutex_init(&mutex, NULL);
+
     /* 创建套接字 句柄 */
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
@@ -171,8 +187,12 @@ int main()
     bzero(&tmpReadSet, sizeof(tmpReadSet));
     while (1)
     {
+        /* */
+        pthread_mutex_lock(&mutex);
         /* 备份读集合 */
         tmpReadSet = readSet;
+        pthread_mutex_unlock(&mutex);
+
         ret = select(maxfd + 1, &tmpReadSet, NULL, NULL, NULL);
         if (ret == -1)
         {
@@ -233,8 +253,8 @@ int main()
 
 
 
-
-
+    /* 销毁互斥锁 */
+    pthread_mutex_destroy(&mutex);
 
     return 0;
 }
